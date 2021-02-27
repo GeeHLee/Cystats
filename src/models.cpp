@@ -1,39 +1,7 @@
 #include "models.h"
-#include <algorithm>
-#include <math.h>
-// #include <pybind11.h>
-
-using namespace std;
-
-class OLS{
-    public:
-        Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> X;
-        Eigen::Array<float, Eigen::Dynamic, 1> Y;
-        Eigen::VectorXf params;
-        Eigen::VectorXf resid;
-        float aic;
-        Eigen::VectorXf se;
-
-        void fit(Eigen::MatrixXf input_X, Eigen::VectorXf input_y);
-};
-
-class ADF{
-    public:
-        float stat;
-        // get maxlag function
-        int get_maxlag(Eigen::Array<float, Eigen::Dynamic, 1> X);
-        // lagmat function
-        Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> lagmat(Eigen::Array<float, Eigen::Dynamic, 1> X, int maxlag);
-        // make diff for 1 order
-        Eigen::ArrayXf make_diff(Eigen::Array<float, Eigen::Dynamic, 1> X);
-        // add constant to matrix
-        Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> add_const(Eigen::MatrixXf M, bool prepend);
-        // run test function
-        void run(Eigen::Array<float, Eigen::Dynamic, 1> X, OLS* mod);
-    private:
-        int ntrend = 1;
-        Eigen::Vector2f out = Eigen::Vector2f::Zero();
-};
+#include <pybind11/pybind11.h>
+#include <pybind11/eigen.h>
+#include <pybind11/numpy.h>
 
 void OLS::fit(Eigen::MatrixXf input_X, Eigen::VectorXf input_y){
     X.resize(input_X.rows(), input_X.cols());
@@ -89,7 +57,7 @@ Eigen::ArrayXf ADF::make_diff(Eigen::Array<float, Eigen::Dynamic, 1> X){
     return diff_mat;
 }
 
-Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> ADF::add_const(Eigen::MatrixXf M, bool prepend){
+Eigen::MatrixXf ADF::add_const(Eigen::MatrixXf M, bool prepend){
     Eigen::MatrixXf M_c(M.rows(), M.cols() + 1);
     Eigen::ArrayXf constant = Eigen::ArrayXf::Ones(M.rows(), 1);
     if(prepend == true){
@@ -136,18 +104,53 @@ void ADF::run(Eigen::Array<float, Eigen::Dynamic, 1> X, OLS* mod){
 }
 
 
-int main(){
-    OLS* mod = new OLS();
-    ADF* test = new ADF();
-    Eigen::VectorXf input_X(10);
-    
-    input_X << 0.23298801, -0.78057248, -1.23946256 , 0.12780824, -0.85410113, 0.77147467, 2.11312377, 0.75754486, 0.11385792, 1.86346807;
-    int maxlag = test->get_maxlag(input_X);
-    Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> lm = test->lagmat(input_X, maxlag);
-    test->run(input_X, mod);
-    cout << test->stat << endl;
-    delete test;
+Eigen::MatrixXf add_test(Eigen::MatrixXf M, bool prepend){
+    Eigen::MatrixXf M_c(M.rows(), M.cols() + 1);
+    Eigen::ArrayXf constant = Eigen::ArrayXf::Ones(M.rows(), 1);
+    if(prepend == true){
+        M_c << constant, M;
+    }else{
+        M_c << M, constant;
+    }
+    return M_c;
 }
+
+
+namespace py = pybind11;
+PYBIND11_MODULE(Cystats, m){
+    py::class_<OLS>(m, "OLS")
+        .def(py::init())
+        .def("fit", &OLS::fit)
+        .def_readwrite("params", &OLS::params)
+        .def_readwrite("resid", &OLS::resid)
+        .def_readwrite("aic", &OLS::aic)
+        .def_readwrite("se", &OLS::se);
+        
+    py::class_<ADF>(m, "ADF")
+        .def(py::init())
+        .def("get_maxlag", &ADF::get_maxlag)
+        .def("lagmat", &ADF::lagmat)
+        .def("make_diff", &ADF::make_diff)
+        .def("add_const", &ADF::add_const, py::return_value_policy::reference_internal)
+        .def("run", &ADF::run);
+}
+
+
+// int main(){
+//     OLS* mod = new OLS();
+//     ADF* test = new ADF();
+//     Eigen::VectorXf input_X(10);
+    
+//     input_X << 0.23298801, -0.78057248, -1.23946256 , 0.12780824, -0.85410113, 0.77147467, 2.11312377, 0.75754486, 0.11385792, 1.86346807;
+//     int maxlag = test->get_maxlag(input_X);
+//     Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> lm = test->lagmat(input_X, maxlag);
+//     test->run(input_X, mod);
+//     cout << test->stat << endl;
+//     delete test;
+// }
+
+
+
 
 
 // PYBIND11_MODULE(LR, m){
