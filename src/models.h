@@ -7,30 +7,46 @@ using namespace std;
 
 class OLS{
     public:
-        Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> X;
-        Eigen::Array<float, Eigen::Dynamic, 1> Y;
-        Eigen::VectorXf params;
-        Eigen::VectorXf resid;
-        float aic;
-        Eigen::VectorXf se;
+        // copy of inputs:
+        Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic> X;
+        Eigen::Array<double, Eigen::Dynamic, 1> Y;
+        
+        // set attribute of OLS class:
+        // params is the coefficient of each variable of X.
+        Eigen::VectorXd params;
+        Eigen::VectorXd fittedvalues;
+        Eigen::VectorXd resid;
+        double _rss = 0;
+        double llf;
+        double aic = 0;
+        double degree = 0;
+        Eigen::VectorXd se;
+        Eigen::VectorXd tvalues;
 
-        void fit(Eigen::MatrixXf input_X, Eigen::VectorXf input_y);
+        // public functions:
+        void fit(Eigen::MatrixXd input_X, Eigen::VectorXd input_y, bool has_const);
+        Eigen::VectorXd predict(Eigen::MatrixXd input_X);
+        double log_like(int n, double rss);
+    
+    private:
+        bool _fit = false;
+        double k_constant = 0.0;
 };
 
 class ADF{
     public:
-        float stat;
+        double stat;
         // get maxlag function
-        int get_maxlag(Eigen::Array<float, Eigen::Dynamic, 1> X);
+        int get_maxlag(Eigen::Array<double, Eigen::Dynamic, 1> X);
         // lagmat function
-        Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> lagmat(Eigen::Array<float, Eigen::Dynamic, 1> X, int maxlag);
+        Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic> lagmat(Eigen::Array<double, Eigen::Dynamic, 1> X, int maxlag);
         // make diff for 1 order
-        Eigen::ArrayXf make_diff(Eigen::Array<float, Eigen::Dynamic, 1> X);
+        Eigen::ArrayXd make_diff(Eigen::Array<double, Eigen::Dynamic, 1> X);
         // add constant to matrix
-        Eigen::MatrixXf add_const(Eigen::MatrixXf M, bool prepend);
+        Eigen::MatrixXd add_const(Eigen::MatrixXd M, bool prepend);
         // run test function
-        void run(Eigen::Array<float, Eigen::Dynamic, 1> X, OLS* mod);
+        void run(Eigen::Array<double, Eigen::Dynamic, 1> X, OLS* mod);
     private:
         int ntrend = 1;
-        Eigen::Vector2f out = Eigen::Vector2f::Zero();
+        Eigen::Vector2d out = Eigen::Vector2d::Zero();
 };
